@@ -45,8 +45,8 @@
 
                 async login() {
                     this.isLoading = true;
-                    // Use relative path for robust routing
-                    const apiUrl = '/api/v1/login';
+                    // FIX: Gunakan {{ url(...) }} agar sesuai dengan subfolder hosting
+                    const apiUrl = '{{ url("/api/v1/login") }}';
 
                     try {
                         let res = await fetch(apiUrl, {

@@ -46,7 +46,8 @@
                 async login() {
                     this.isLoading = true;
                     try {
-                        let res = await fetch('/api/v1/login', {
+                        // FIX: Gunakan {{ url(...) }} agar sesuai dengan subfolder hosting
+                        let res = await fetch('{{ url("/api/v1/login") }}', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify({ email: this.email, password: this.password })
