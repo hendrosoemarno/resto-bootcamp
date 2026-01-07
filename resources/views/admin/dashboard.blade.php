@@ -333,94 +333,82 @@
                 report: { summary: {}, transactions: [] },
                 showModal: false,
                 form: { id: null, name: '', price: 0, category: '', image_url: '' },
-
-                // New States for Search & Sort
                 searchQuery: '',
                 sortBy: 'name',
                 sortDir: 'asc',
-
-                // Upload State
                 isDragging: false,
                 imagePreview: null,
                 uploadedFile: null,
 
+                // Helper: Get API Base URL dynamically
+                get apiBase() {
+                    // Logic: /admin/dashboard -> /api/v1
+                    // Logic: /resto-bootcamp/admin/dashboard -> /resto-bootcamp/api/v1
+                    const basePath = window.location.pathname.split('/admin/')[0];
+                    return basePath + '/api/v1';
+                },
+
+                // Helper: Get Route Base URL dynamically
+                get routeBase() {
+                    return window.location.pathname.split('/admin/')[0];
+                },
+
                 async init() {
                     if (!this.token) {
-                        window.location.href = '{{ route('admin.login') }}';
+                        window.location.href = this.routeBase + '/admin/login';
                         return;
                     }
                     await this.fetchCategories();
                     await this.fetchMenus();
                 },
 
-                // Computed Property Logic implemented as a getter
                 get filteredMenus() {
                     let result = this.menus;
-
-                    // 1. Filter
                     if (this.searchQuery) {
                         const lower = this.searchQuery.toLowerCase();
-                        result = result.filter(m =>
-                            m.name.toLowerCase().includes(lower) ||
-                            m.category.toLowerCase().includes(lower)
-                        );
+                        result = result.filter(m => m.name.toLowerCase().includes(lower) || m.category.toLowerCase().includes(lower));
                     }
-
-                    // 2. Sort
                     result = result.sort((a, b) => {
-                        let valA = a[this.sortBy];
-                        let valB = b[this.sortBy];
-
-                        // Handle string case
+                        let valA = a[this.sortBy]; let valB = b[this.sortBy];
                         if (typeof valA === 'string') valA = valA.toLowerCase();
                         if (typeof valB === 'string') valB = valB.toLowerCase();
-
                         if (valA < valB) return this.sortDir === 'asc' ? -1 : 1;
                         if (valA > valB) return this.sortDir === 'asc' ? 1 : -1;
                         return 0;
                     });
-
                     return result;
                 },
 
                 sort(column) {
-                    if (this.sortBy === column) {
-                        this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
-                    } else {
-                        this.sortBy = column;
-                        this.sortDir = 'asc';
-                    }
+                    if (this.sortBy === column) { this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc'; }
+                    else { this.sortBy = column; this.sortDir = 'asc'; }
                 },
 
-                // --- CATEGORY LOGIC ---
                 async fetchCategories() {
                     try {
-                        let res = await fetch('/api/v1/admin/categories', {
+                        let res = await fetch(`${this.apiBase}/admin/categories`, {
                             headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
                         });
-                        let data = await res.json();
-                        this.categories = data;
+                        if (res.ok) { let data = await res.json(); this.categories = data; }
                     } catch (e) { }
                 },
 
                 async createCategory() {
                     if (!this.newCategoryName) return;
                     try {
-                        let res = await fetch('/api/v1/admin/categories', {
+                        let res = await fetch(`${this.apiBase}/admin/categories`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
                             body: JSON.stringify({ name: this.newCategoryName })
                         });
-                        if (res.ok) {
-                            this.newCategoryName = '';
-                            this.fetchCategories();
-                        } else alert('Gagal buat kategori');
+                        if (res.ok) { this.newCategoryName = ''; await this.fetchCategories(); }
+                        else alert('Gagal buat kategori');
                     } catch (e) { }
                 },
 
                 async updateCategory(cat) {
                     try {
-                        await fetch(`/api/v1/admin/categories/${cat.id}`, {
+                        await fetch(`${this.apiBase}/admin/categories/${cat.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
                             body: JSON.stringify({ name: cat.name })
@@ -431,18 +419,18 @@
                 async deleteCategory(id) {
                     if (!confirm('Hapus kategori ini?')) return;
                     try {
-                        let res = await fetch(`/api/v1/admin/categories/${id}`, {
+                        let res = await fetch(`${this.apiBase}/admin/categories/${id}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
                         });
                         if (res.ok) this.fetchCategories();
                     } catch (e) { }
                 },
-                // ----------------------
 
                 async fetchMenus() {
                     try {
-                        let res = await fetch(`{{ url('/api/v1/restaurants') }}/${this.currentUser.restaurant_id}/menu`);
+                        // Fix for default route
+                        let res = await fetch(`${this.apiBase}/restaurants/${this.currentUser.restaurant_id || 1}/menu`);
                         let data = await res.json();
                         this.menus = data.menus;
                     } catch (e) { alert('Gagal memuat menu'); }
@@ -450,7 +438,7 @@
 
                 async fetchReports() {
                     try {
-                        let res = await fetch('/api/v1/admin/reports', {
+                        let res = await fetch(`${this.apiBase}/admin/reports`, {
                             headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
                         });
                         let data = await res.json();
@@ -485,7 +473,7 @@
 
                 async saveMenu() {
                     const isEdit = !!this.form.id;
-                    const url = isEdit ? `/api/v1/admin/menus/${this.form.id}` : '/api/v1/admin/menus';
+                    const url = isEdit ? `${this.apiBase}/admin/menus/${this.form.id}` : `${this.apiBase}/admin/menus`;
                     const formData = new FormData();
                     formData.append('name', this.form.name);
                     formData.append('price', this.form.price);
@@ -508,7 +496,7 @@
                 async deleteMenu(id) {
                     if (!confirm('Hapus menu ini?')) return;
                     try {
-                        let res = await fetch(`/api/v1/admin/menus/${id}`, {
+                        let res = await fetch(`${this.apiBase}/admin/menus/${id}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
                         });
@@ -518,28 +506,22 @@
 
                 async toggleAvailability(menu) {
                     try {
-                        // Toggle local state immediately for UI responsiveness
                         menu.is_available = !menu.is_available;
-
-                        let res = await fetch(`/api/v1/admin/menus/${menu.id}`, {
+                        let res = await fetch(`${this.apiBase}/admin/menus/${menu.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
                             body: JSON.stringify({ is_available: menu.is_available })
                         });
-
-                        if (!res.ok) {
-                            // Revert if failed
-                            menu.is_available = !menu.is_available;
-                            alert('Gagal update status');
-                        }
-                    } catch (e) {
-                        menu.is_available = !menu.is_available;
-                        alert('Error system');
-                    }
+                        if (!res.ok) { menu.is_available = !menu.is_available; alert('Gagal update'); }
+                    } catch (e) { menu.is_available = !menu.is_available; }
                 },
                 formatRupiah(num) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num); },
                 formatDate(dateStr) { return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); },
-                logout() { localStorage.removeItem('admin_token'); window.location.href = '{{ route('admin.login') }}'; }
+
+                logout() {
+                    localStorage.removeItem('admin_token');
+                    window.location.href = this.routeBase + '/admin/login';
+                }
             }
         }
     </script>
