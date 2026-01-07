@@ -23,7 +23,8 @@ class AdminMenuController extends Controller
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('menus', 'public');
-            $imageUrl = asset('storage/' . $path);
+            // FIX: Gunakan url() pembungkus Storage::url() agar support subfolder
+            $imageUrl = url(\Illuminate\Support\Facades\Storage::url($path));
         }
 
         $menu = Menu::create([
@@ -57,7 +58,8 @@ class AdminMenuController extends Controller
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('menus', 'public');
-            $data['image_url'] = asset('storage/' . $path);
+            // FIX: Gunakan url() pembungkus Storage::url() agar support subfolder
+            $data['image_url'] = url(\Illuminate\Support\Facades\Storage::url($path));
         } elseif ($request->has('image_url') && $request->image_url) {
             $data['image_url'] = $request->image_url;
         }
