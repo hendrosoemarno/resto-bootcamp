@@ -186,14 +186,30 @@
 
                 async init() {
                     try {
-                        let response = await fetch(`${this.apiBase}/restaurants/${this.restaurantId}/menu?table_number=${this.tableNumber}`);
+                        const apiUrl = `${this.apiBase}/restaurants/${this.restaurantId}/menu?table_number=${this.tableNumber}`;
+                        console.log('Fetching menu from:', apiUrl);
+                        
+                        let response = await fetch(apiUrl);
+                        console.log('Response status:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
                         let data = await response.json();
+                        console.log('Response data:', data);
+
+                        // Validate response structure
+                        if (!data || !data.menus) {
+                            throw new Error('Invalid response format: missing menus array');
+                        }
 
                         this.menus = data.menus;
                         // Extract categories
                         let cats = [...new Set(this.menus.map(m => m.category))];
                         this.categories = ['all', ...cats];
                     } catch (e) {
+                        console.error('Menu loading error:', e);
                         alert('Gagal memuat menu: ' + e.message);
                     } finally {
                         this.loading = false;
