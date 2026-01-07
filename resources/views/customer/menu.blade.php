@@ -175,9 +175,18 @@
                 showCart: false,
                 isSubmitting: false,
 
+                // Helper: Get API Base URL dynamically
+                get apiBase() {
+                    // Extract base path from current URL
+                    // /order/1 -> /api/v1
+                    // /resto-bootcamp/order/1 -> /resto-bootcamp/api/v1
+                    const basePath = window.location.pathname.split('/order/')[0];
+                    return basePath + '/api/v1';
+                },
+
                 async init() {
                     try {
-                        let response = await fetch(`{{ url('/api/v1/restaurants') }}/${this.restaurantId}/menu?table_number=${this.tableNumber}`);
+                        let response = await fetch(`${this.apiBase}/restaurants/${this.restaurantId}/menu?table_number=${this.tableNumber}`);
                         let data = await response.json();
 
                         this.menus = data.menus;
@@ -259,7 +268,7 @@
                     };
 
                     try {
-                        let res = await fetch('{{ url('/api/v1/orders') }}', {
+                        let res = await fetch(`${this.apiBase}/orders`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
@@ -268,8 +277,9 @@
                         let result = await res.json();
 
                         if (res.ok) {
-                            // Redirect to status page
-                            window.location.href = `{{ url('/order/status') }}/${result.order_number}`;
+                            // Redirect to status page (dynamic path)
+                            const basePath = window.location.pathname.split('/order/')[0];
+                            window.location.href = `${basePath}/order/status/${result.order_number}`;
                         } else {
                             alert('Gagal Order: ' + (result.message || 'Unknown Error'));
                         }
