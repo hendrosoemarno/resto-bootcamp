@@ -64,6 +64,12 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Admin: Reports
     Route::get('/admin/reports', [\App\Http\Controllers\Api\Admin\ReportController::class, 'index']);
 
+    // Admin: Category Management
+    Route::get('/admin/categories', [\App\Http\Controllers\Api\Admin\AdminCategoryController::class, 'index']);
+    Route::post('/admin/categories', [\App\Http\Controllers\Api\Admin\AdminCategoryController::class, 'store']);
+    Route::put('/admin/categories/{id}', [\App\Http\Controllers\Api\Admin\AdminCategoryController::class, 'update']);
+    Route::delete('/admin/categories/{id}', [\App\Http\Controllers\Api\Admin\AdminCategoryController::class, 'destroy']);
+
 });
 
 Route::get('/user', function (Request $request) {

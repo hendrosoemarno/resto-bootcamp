@@ -14,17 +14,24 @@ class AdminMenuController extends Controller
             'name' => 'required|string',
             'price' => 'required|numeric',
             'category' => 'required|string',
-            'image_url' => 'nullable|url',
+            'image' => 'nullable|image|max:2048', // 2MB max
+            'image_url' => 'nullable|string'
         ]);
 
         $user = $request->user();
+        $imageUrl = $request->image_url;
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('menus', 'public');
+            $imageUrl = asset('storage/' . $path);
+        }
 
         $menu = Menu::create([
             'restaurant_id' => $user->restaurant_id,
             'name' => $request->name,
             'price' => $request->price,
             'category' => $request->category,
-            'image_url' => $request->image_url,
+            'image_url' => $imageUrl,
             'is_available' => true,
         ]);
 
@@ -38,10 +45,24 @@ class AdminMenuController extends Controller
         $request->validate([
             'name' => 'sometimes|string',
             'price' => 'sometimes|numeric',
-            'is_available' => 'boolean'
+            'is_available' => 'boolean',
+            'image' => 'nullable|image|max:2048'
         ]);
 
-        $menu->update($request->all());
+        $data = $request->except(['image', '_method']);
+
+        if ($request->has('is_available')) {
+            $data['is_available'] = filter_var($request->is_available, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('menus', 'public');
+            $data['image_url'] = asset('storage/' . $path);
+        } elseif ($request->has('image_url') && $request->image_url) {
+            $data['image_url'] = $request->image_url;
+        }
+
+        $menu->update($data);
 
         return response()->json(['message' => 'Menu updated', 'menu' => $menu]);
     }
