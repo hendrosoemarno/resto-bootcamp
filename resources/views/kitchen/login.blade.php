@@ -45,8 +45,10 @@
 
                 async login() {
                     this.isLoading = true;
-                    // FIX: Gunakan {{ url(...) }} agar sesuai dengan subfolder hosting
-                    const apiUrl = '{{ url("/api/v1/login") }}';
+                    // FIX: Pure JS Path Detection (No Blade)
+                    // Ambil base URL tempat aplikasi berada
+                    const basePath = window.location.pathname.split('/kitchen/')[0];
+                    const apiUrl = basePath + '/api/v1/login';
 
                     try {
                         let res = await fetch(apiUrl, {
@@ -63,7 +65,8 @@
                         if (res.ok) {
                             localStorage.setItem('kitchen_token', data.token);
                             localStorage.setItem('kitchen_user', JSON.stringify(data.user));
-                            window.location.href = '{{ route('kitchen.dashboard') }}';
+                            // Redirect manual tanpa Blade
+                            window.location.href = basePath + '/kitchen/dashboard';
                         } else {
                             alert('Gagal: ' + (data.message || (data.email ? data.email[0] : 'Kredensial salah')));
                             console.error('Login failed:', data);

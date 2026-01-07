@@ -45,9 +45,12 @@
 
                 async login() {
                     this.isLoading = true;
+                    // FIX: Pure JS Path Logic
+                    const basePath = window.location.pathname.split('/admin/')[0];
+                    const apiUrl = basePath + '/api/v1/login';
+
                     try {
-                        // FIX: Gunakan {{ url(...) }} agar sesuai dengan subfolder hosting
-                        let res = await fetch('{{ url("/api/v1/login") }}', {
+                        let res = await fetch(apiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify({ email: this.email, password: this.password })
@@ -62,7 +65,7 @@
                             }
                             localStorage.setItem('admin_token', data.token);
                             localStorage.setItem('admin_user', JSON.stringify(data.user));
-                            window.location.href = '{{ route('admin.dashboard') }}';
+                            window.location.href = basePath + '/admin/dashboard';
                         } else {
                             alert('Gagal: ' + (data.message || 'Error'));
                         }
