@@ -132,9 +132,20 @@
                 selectedOrder: null,
                 isProcessing: false,
 
+                // Helper: Get API Base URL dynamically
+                get apiBase() {
+                    const basePath = window.location.pathname.split('/cashier/')[0];
+                    return basePath + '/api/v1';
+                },
+
+                // Helper: Get Route Base URL dynamically
+                get routeBase() {
+                    return window.location.pathname.split('/cashier/')[0];
+                },
+
                 async init() {
                     if (!this.token) {
-                        window.location.href = '{{ route('cashier.login') }}';
+                        window.location.href = this.routeBase + '/cashier/login';
                         return;
                     }
                     await this.fetchOrders();
@@ -147,14 +158,8 @@
                 },
 
                 async fetchOrders() {
-                    // Reuse Kitchen Endpoint temporary or create new one?
-                    // Ideally create specific endpoint. But for MVP, let's use Kitchen API if it returns all?
-                    // No, Kitchen API filters by QUEUED/COOKING. 
-                    // Let's use Customer API "show" loop? No inefficient.
-                    // We need a proper endpoint. I will assume I created one or use a trick.
-                    // TRICK: I'll use a new Endpoint in api.php quick.
                     try {
-                        let res = await fetch('/api/v1/cashier/orders', {
+                        let res = await fetch(`${this.apiBase}/cashier/orders`, {
                             headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
                         });
                         if (res.status === 401) this.logout();
@@ -169,7 +174,7 @@
                 async confirmPay(method) {
                     this.isProcessing = true;
                     try {
-                        let res = await fetch('/api/v1/cashier/payments/confirm', {
+                        let res = await fetch(`${this.apiBase}/cashier/payments/confirm`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -199,7 +204,7 @@
 
                 logout() {
                     localStorage.removeItem('cashier_token');
-                    window.location.href = '{{ route('cashier.login') }}';
+                    window.location.href = this.routeBase + '/cashier/login';
                 },
 
                 formatRupiah(num) {

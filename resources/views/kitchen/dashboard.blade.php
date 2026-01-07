@@ -178,9 +178,20 @@
                 token: localStorage.getItem('kitchen_token'),
                 currentUser: JSON.parse(localStorage.getItem('kitchen_user') || '{}'),
 
+                // Helper: Get API Base URL dynamically
+                get apiBase() {
+                    const basePath = window.location.pathname.split('/kitchen/')[0];
+                    return basePath + '/api/v1';
+                },
+
+                // Helper: Get Route Base URL dynamically
+                get routeBase() {
+                    return window.location.pathname.split('/kitchen/')[0];
+                },
+
                 async init() {
                     if (!this.token) {
-                        window.location.href = '{{ route('kitchen.login') }}';
+                        window.location.href = this.routeBase + '/kitchen/login';
                         return;
                     }
 
@@ -199,7 +210,7 @@
 
                 async fetchOrders() {
                     try {
-                        let res = await fetch('{{ url('/api/v1/kitchen/orders') }}', {
+                        let res = await fetch(`${this.apiBase}/kitchen/orders`, {
                             headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
                         });
 
@@ -213,7 +224,7 @@
                 async updateStatus(id, action) {
                     // action: 'start' or 'ready'
                     try {
-                        let res = await fetch(`{{ url('/api/v1/kitchen/orders') }}/${id}/${action}`, {
+                        let res = await fetch(`${this.apiBase}/kitchen/orders/${id}/${action}`, {
                             method: 'PUT',
                             headers: {
                                 'Authorization': `Bearer ${this.token}`,
@@ -231,7 +242,7 @@
 
                 logout() {
                     localStorage.removeItem('kitchen_token');
-                    window.location.href = '{{ route('kitchen.login') }}';
+                    window.location.href = this.routeBase + '/kitchen/login';
                 },
 
                 timeSince(dateString) {
