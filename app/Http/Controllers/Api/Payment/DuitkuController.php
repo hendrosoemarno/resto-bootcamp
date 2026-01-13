@@ -121,7 +121,13 @@ class DuitkuController extends Controller
 
         // Verify signature
         if (!$this->duitkuService->verifyCallback($merchantCode, $amount, $merchantOrderId, $signature)) {
-            Log::error('Duitku Callback: Invalid signature');
+            Log::error('Duitku Callback: Invalid signature', [
+                'received' => $signature,
+                'merchantCode' => $merchantCode,
+                'amount' => $amount,
+                'merchantOrderId' => $merchantOrderId,
+                'expected' => md5($merchantCode . (int) $amount . $merchantOrderId . config('duitku.api_key'))
+            ]);
             return response()->json(['success' => false, 'message' => 'Invalid signature'], 400);
         }
 
@@ -135,35 +141,31 @@ class DuitkuController extends Controller
                 return response()->json(['success' => false, 'message' => 'Order not found'], 404);
             }
 
-            // Find payment
+            // Find existing payment record (created in createPayment)
             $payment = Payment::where('order_id', $order->id)
-                ->where('method', 'DUITKU')
+                ->where('transaction_status', 'PENDING')
                 ->latest()
                 ->first();
-
-            if (!$payment) {
-                Log::error('Duitku Callback: Payment not found', ['order_id' => $order->id]);
-                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
-            }
 
             // Update payment status based on result code
             if ($resultCode === '00') {
                 // Success - Use OrderService for consistent workflow (logs, events)
                 $this->orderService->markAsPaid($order, [
                     'amount' => $amount,
-                    'method' => 'DUITKU',
+                    'method' => 'DUITKU-' . ($request->input('paymentCode') ?? 'ONLINE'),
                     'external_id' => $request->input('reference'),
                 ]);
 
-                // Update the payment record created by createPayment with any final callback details
+                // Update the payment record details (Note: markAsPaid creates its own record, 
+                // but we keep this for audit trail if it exists)
                 if ($payment) {
                     $payment->update([
-                        'transaction_status' => 'SUCCESS', // or 'settlement' to match Service
+                        'transaction_status' => 'SUCCESS',
                         'payment_details' => json_encode($request->all())
                     ]);
                 }
 
-                Log::info('Duitku Callback: Payment success processed via OrderService', ['order_number' => $merchantOrderId]);
+                Log::info('Duitku Callback: Payment success processed', ['order_number' => $merchantOrderId]);
             } else {
                 // Failed
                 $payment->update([
@@ -189,7 +191,7 @@ class DuitkuController extends Controller
     }
 
     /**
-     * Check payment status
+     * Check payment status and sync with Duitku
      */
     public function checkStatus(Request $request)
     {
@@ -200,10 +202,16 @@ class DuitkuController extends Controller
         try {
             $order = Order::where('order_number', $request->order_number)->first();
             if (!$order) {
+                return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+            }
+
+            // If already paid locally, no need to check remote
+            if ($order->payment_status === 'PAID') {
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Order not found'
-                ], 404);
+                    'success' => true,
+                    'message' => 'Order already paid locally',
+                    'payment_status' => 'PAID'
+                ]);
             }
 
             $result = $this->duitkuService->checkTransactionStatus($order->order_number);
@@ -211,14 +219,36 @@ class DuitkuController extends Controller
             if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to check status',
+                    'message' => 'Failed to check status with Duitku',
                     'error' => $result['message']
                 ], 500);
             }
 
+            $data = $result['data'];
+            // Duitku statusCode '00' means success/paid
+            $statusCode = $data['statusCode'] ?? ($data['resultCode'] ?? null);
+
+            if ($statusCode === '00') {
+                // Sync status to local DB
+                $this->orderService->markAsPaid($order, [
+                    'amount' => $data['amount'] ?? $order->total_amount,
+                    'method' => 'DUITKU-SYNC',
+                    'external_id' => $data['reference'] ?? null,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment status synced: PAID',
+                    'payment_status' => 'PAID',
+                    'data' => $data
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
-                'data' => $result['data']
+                'message' => 'Payment status: ' . ($data['statusMessage'] ?? 'PENDING'),
+                'payment_status' => $order->payment_status,
+                'data' => $data
             ]);
 
         } catch (\Exception $e) {

@@ -78,10 +78,16 @@
                                 <td class="p-4 font-bold text-gray-800" x-text="formatRupiah(order.total_amount)"></td>
                                 <td class="p-4 text-xs text-gray-500" x-text="timeSince(order.created_at)"></td>
                                 <td class="p-4 text-center">
-                                    <button @click="processPayment(order)"
-                                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition">
-                                        Bayar Tunai 💵
-                                    </button>
+                                    <div class="flex gap-2 justify-center">
+                                        <button @click="processPayment(order)"
+                                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition">
+                                            Tunai 💵
+                                        </button>
+                                        <button @click="syncDuitku(order.order_number)"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1">
+                                            🔄 Online
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
@@ -296,6 +302,28 @@
                         alert('Error system');
                     } finally {
                         this.isProcessing = false;
+                    }
+                },
+
+                async syncDuitku(orderNumber) {
+                    try {
+                        let res = await fetch(`${this.apiBase}/payment/duitku/check-status`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ order_number: orderNumber })
+                        });
+                        let data = await res.json();
+                        if (data.success) {
+                            alert('Status: ' + data.message);
+                            this.fetchOrders();
+                        } else {
+                            alert('Gagal cek Duitku: ' + (data.message || 'Error'));
+                        }
+                    } catch (e) {
+                        alert('Gagal menghubungkan ke server.');
                     }
                 },
 

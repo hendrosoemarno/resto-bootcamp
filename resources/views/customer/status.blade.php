@@ -168,13 +168,25 @@
 
                 async checkStatus() {
                     try {
+                        // 1. Get internal order status
                         let res = await fetch(`${this.apiBase}/orders/${this.orderNumber}`);
                         let data = await res.json();
                         if (data.status) {
                             this.status = data.status;
                             this.paymentStatus = data.payment_status;
                         }
-                    } catch (e) { console.error('Polling error', e); }
+
+                        // 2. If UNPAID, trigger a sync/check with Duitku (especially useful when coming back from redirect)
+                        if (this.paymentStatus === 'UNPAID') {
+                            await fetch(`${this.apiBase}/payment/duitku/check-status`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ order_number: this.orderNumber })
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Polling error', e);
+                    }
                 },
 
                 async payWithDuitku() {
