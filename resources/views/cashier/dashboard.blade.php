@@ -129,15 +129,22 @@
                                 <td class="p-4" x-text="order.customer_name"></td>
                                 <td class="p-4 font-bold" x-text="formatRupiah(order.total_amount)"></td>
                                 <td class="p-4">
-                                    <template x-if="order.payment?.method === 'CASH'">
-                                        <span
-                                            class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-[10px] font-bold">TUNAI
-                                            💵</span>
+                                    <template x-if="order.payment">
+                                        <div>
+                                            <template x-if="order.payment.method === 'CASH'">
+                                                <span
+                                                    class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-[10px] font-bold">TUNAI
+                                                    💵</span>
+                                            </template>
+                                            <template x-if="order.payment.method !== 'CASH'">
+                                                <span
+                                                    class="bg-purple-100 text-purple-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase"
+                                                    x-text="order.payment.method.replace('DUITKU-', '') || 'ONLINE 💳'"></span>
+                                            </template>
+                                        </div>
                                     </template>
-                                    <template x-if="order.payment?.method !== 'CASH'">
-                                        <span
-                                            class="bg-purple-100 text-purple-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase"
-                                            x-text="order.payment?.method.replace('DUITKU-', '') || 'ONLINE 💳'"></span>
+                                    <template x-if="!order.payment">
+                                        <span class="text-gray-400 text-xs italic">No data</span>
                                     </template>
                                 </td>
                                 <td class="p-4 text-green-600 font-medium">

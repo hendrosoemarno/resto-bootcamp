@@ -48,7 +48,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 
     // Cashier: List Orders (Unpaid and Recent Paid for today)
     Route::get('/cashier/orders', function (Request $request) {
-        return \App\Models\Order::with(['items.menu', 'table'])
+        return \App\Models\Order::with(['items.menu', 'table', 'payment'])
             ->where('restaurant_id', $request->user()->restaurant_id)
             ->where(function ($q) {
                 $q->where('payment_status', 'UNPAID')

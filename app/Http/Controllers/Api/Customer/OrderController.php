@@ -112,7 +112,7 @@ class OrderController extends Controller
 
     public function show($orderNumber)
     {
-        $order = Order::with(['items.menu', 'table'])
+        $order = Order::with(['items.menu', 'table', 'payment'])
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
