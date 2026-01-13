@@ -103,13 +103,15 @@
                             <th class="p-4">Order No</th>
                             <th class="p-4">Pelanggan</th>
                             <th class="p-4">Total</th>
+                            <th class="p-4">Bayar</th>
+                            <th class="p-4">Kembali</th>
                             <th class="p-4 text-center">Nota</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y text-sm">
                         <template x-if="paidOrders.length === 0">
                             <tr>
-                                <td colspan="4" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang
+                                <td colspan="6" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang
                                     dibayar hari ini.</td>
                             </tr>
                         </template>
@@ -119,6 +121,12 @@
                                 <td class="p-4 font-mono font-bold" x-text="order.order_number"></td>
                                 <td class="p-4" x-text="order.customer_name"></td>
                                 <td class="p-4 font-bold" x-text="formatRupiah(order.total_amount)"></td>
+                                <td class="p-4 text-green-600 font-medium">
+                                    <span x-text="getPaymentDetail(order, 'cash_received')"></span>
+                                </td>
+                                <td class="p-4 text-orange-600 font-medium">
+                                    <span x-text="getPaymentDetail(order, 'change')"></span>
+                                </td>
                                 <td class="p-4 text-center">
                                     <button @click="printReceipt(order.id)"
                                         class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded-md text-xs font-bold transition">
@@ -298,6 +306,16 @@
 
                 formatRupiah(num) {
                     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+                },
+
+                getPaymentDetail(order, key) {
+                    if (!order.payment || !order.payment.payment_details) return '-';
+                    try {
+                        const details = JSON.parse(order.payment.payment_details);
+                        return this.formatRupiah(details[key] || 0);
+                    } catch (e) {
+                        return '-';
+                    }
                 },
 
                 timeSince(date) {
