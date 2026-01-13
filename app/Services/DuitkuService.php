@@ -129,10 +129,11 @@ class DuitkuService
                 ];
             }
 
+            $errorResponse = $response->json();
             return [
                 'success' => false,
-                'message' => 'Failed to create transaction',
-                'error' => $response->json()
+                'message' => $errorResponse['statusMessage'] ?? 'Failed to create transaction',
+                'error' => $errorResponse
             ];
         } catch (\Exception $e) {
             Log::error('Duitku Create Transaction Error: ' . $e->getMessage());

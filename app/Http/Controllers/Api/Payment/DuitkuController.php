@@ -47,8 +47,8 @@ class DuitkuController extends Controller
             if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal membuat transaksi pembayaran',
-                    'error' => $result['message']
+                    'message' => $result['message'],
+                    'error' => $result['error'] ?? null
                 ], 500);
             }
 
