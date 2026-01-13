@@ -155,7 +155,7 @@ class DuitkuService
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/transactionStatus', [
+            ])->post($this->baseUrl . '/inquiryStatus', [
                         'merchantCode' => $this->merchantCode,
                         'merchantOrderId' => $merchantOrderId,
                         'signature' => $signature
@@ -167,6 +167,12 @@ class DuitkuService
                     'data' => $response->json()
                 ];
             }
+
+            Log::error('Duitku Status Check Failed', [
+                'url' => $this->baseUrl . '/inquiryStatus',
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
 
             return [
                 'success' => false,

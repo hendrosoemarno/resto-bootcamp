@@ -217,11 +217,17 @@ class DuitkuController extends Controller
             $result = $this->duitkuService->checkTransactionStatus($order->order_number);
 
             if (!$result['success']) {
+                $errorMessage = $result['message'];
+                // Handle specific Duitku transition error like "transaction not found"
+                if (isset($result['error']['statusMessage'])) {
+                    $errorMessage = $result['error']['statusMessage'];
+                }
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to check status with Duitku',
-                    'error' => $result['message']
-                ], 500);
+                    'message' => 'Gagal cek Duitku: ' . $errorMessage . '. (Pastikan pelanggan sudah klik "Bayar" di HP/Halaman Status)',
+                    'error' => $result['error'] ?? null
+                ], 400);
             }
 
             $data = $result['data'];
