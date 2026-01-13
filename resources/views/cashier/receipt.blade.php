@@ -156,6 +156,23 @@
             <span>TOTAL</span>
             <span>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
         </div>
+
+        @if($order->payment && $order->payment->method === 'CASH')
+        @php
+        $details = json_decode($order->payment->payment_details, true);
+        @endphp
+        @if($details)
+            <div class="total-row"
+                style="font-size: 11px; margin-top: 5px; font-weight: normal; border-top: 1px dotted #000; padding-top: 5px;">
+                <span>Tunai</span>
+                <span>Rp {{ number_format($details['cash_received'] ?? 0, 0, ',', '.') }}</span>
+            </div>
+            <div class="total-row" style="font-size: 11px; font-weight: normal;">
+                <span>Kembali</span>
+                <span>Rp {{ number_format($details['change'] ?? 0, 0, ',', '.') }}</span>
+            </div>
+        @endif
+        @endif
     </div>
 
     <div class="footer">

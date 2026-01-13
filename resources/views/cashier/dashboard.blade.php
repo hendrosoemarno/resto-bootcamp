@@ -37,7 +37,7 @@
             </div>
             <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
                 <div class="text-gray-500 text-xs font-bold uppercase">Lunas Hari Ini</div>
-                <div class="text-3xl font-bold text-gray-800">-</div> <!-- Todo: Add API for stats -->
+                <div class="text-3xl font-bold text-gray-800" x-text="paidOrders.length">0</div>
             </div>
         </div>
 
@@ -109,7 +109,8 @@
                     <tbody class="divide-y text-sm">
                         <template x-if="paidOrders.length === 0">
                             <tr>
-                                <td colspan="4" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang dibayar hari ini.</td>
+                                <td colspan="4" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang
+                                    dibayar hari ini.</td>
                             </tr>
                         </template>
 
@@ -137,7 +138,15 @@
     <div x-show="selectedOrder" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
         style="display: none;">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" @click.outside="selectedOrder = null">
-            <h3 class="font-bold text-xl mb-4 text-gray-800">Konfirmasi Pembayaran</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-xl text-gray-800">Konfirmasi Pembayaran</h3>
+                <button @click="selectedOrder = null" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
             <div class="bg-gray-50 p-4 rounded-xl mb-6 space-y-2">
                 <div class="flex justify-between text-sm">
@@ -151,14 +160,36 @@
                 </div>
             </div>
 
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Jumlah Bayar (Tunai)</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">Rp</span>
+                    <input type="number" x-model.number="receivedAmount"
+                        class="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-orange-500 focus:bg-white transition outline-none text-xl font-bold"
+                        placeholder="0"
+                        @keyup.enter="if(receivedAmount >= selectedOrder.total_amount) confirmPay('CASH')">
+                </div>
+
+                <template x-if="receivedAmount > 0">
+                    <div class="mt-4 p-4 rounded-xl flex justify-between items-center transition-all shadow-inner"
+                        :class="receivedAmount >= (selectedOrder?.total_amount || 0) ? 'bg-green-50 border border-green-100' : 'bg-red-50 border border-red-100'">
+                        <span class="text-sm font-medium"
+                            :class="receivedAmount >= (selectedOrder?.total_amount || 0) ? 'text-green-600' : 'text-red-600'">
+                            <span
+                                x-text="receivedAmount >= (selectedOrder?.total_amount || 0) ? 'Kembalian' : 'Kurang'"></span>
+                        </span>
+                        <span class="text-xl font-black"
+                            :class="receivedAmount >= (selectedOrder?.total_amount || 0) ? 'text-green-700' : 'text-red-700'"
+                            x-text="formatRupiah(Math.abs(receivedAmount - (selectedOrder?.total_amount || 0)))"></span>
+                    </div>
+                </template>
+            </div>
+
             <div class="space-y-3">
-                <button @click="confirmPay('CASH')" :disabled="isProcessing"
-                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow transition flex justify-center">
-                    <span x-text="isProcessing ? 'Memproses...' : 'Terima Uang Tunai (CASH)'"></span>
-                </button>
-                <button @click="selectedOrder = null"
-                    class="w-full bg-white border border-gray-300 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-50 transition">
-                    Batal
+                <button @click="confirmPay('CASH')"
+                    :disabled="isProcessing || !receivedAmount || receivedAmount < (selectedOrder?.total_amount || 0)"
+                    class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-bold py-4 rounded-2xl shadow transition-all flex justify-center items-center gap-2">
+                    <span x-text="isProcessing ? 'Memproses...' : 'Konfirmasi & Print Nota 💵'"></span>
                 </button>
             </div>
         </div>
@@ -171,6 +202,7 @@
                 currentUser: JSON.parse(localStorage.getItem('cashier_user') || '{}'),
                 orders: [],
                 selectedOrder: null,
+                receivedAmount: 0,
                 isProcessing: false,
 
                 // Helper: Get API Base URL dynamically
@@ -199,7 +231,7 @@
                 },
 
                 get paidOrders() {
-                    return this.orders.filter(o => o.payment_status === 'PAID').sort((a,b) => b.id - a.id);
+                    return this.orders.filter(o => o.payment_status === 'PAID').sort((a, b) => b.id - a.id);
                 },
 
                 printReceipt(id) {
@@ -219,6 +251,7 @@
 
                 processPayment(order) {
                     this.selectedOrder = order;
+                    this.receivedAmount = 0;
                 },
 
                 async confirmPay(method) {
@@ -233,7 +266,8 @@
                             },
                             body: JSON.stringify({
                                 order_id: this.selectedOrder.id,
-                                amount: this.selectedOrder.total_amount
+                                amount: this.selectedOrder.total_amount,
+                                received_amount: this.receivedAmount
                             })
                         });
 

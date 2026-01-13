@@ -39,8 +39,8 @@ class PaymentController extends Controller
 
         // 3. Process Payment via Service
         $this->orderService->markAsPaid($order, [
-            'amount' => $request->amount,
-            'method' => $request->method, // e.g., 'QRIS_MOCK'
+            'amount' => $request->input('amount'),
+            'method' => $request->input('method'), // e.g., 'QRIS_MOCK'
             'external_id' => 'TX-' . time(),
         ]);
 
@@ -56,6 +56,7 @@ class PaymentController extends Controller
         $request->validate([
             'order_id' => 'required|exists:orders,id',
             'amount' => 'required|numeric',
+            'received_amount' => 'required|numeric|min:' . $request->amount,
         ]);
 
         $order = Order::findOrFail($request->order_id);
@@ -65,11 +66,17 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        $change = $request->received_amount - $request->amount;
+
         // Process
         $this->orderService->markAsPaid($order, [
             'amount' => $request->amount,
             'method' => 'CASH',
             'external_id' => null,
+            'payment_details' => json_encode([
+                'cash_received' => (float) $request->received_amount,
+                'change' => (float) $change,
+            ])
         ], $request->user()->id);
 
         return response()->json(['message' => 'Cash payment confirmed']);

@@ -28,6 +28,7 @@ class OrderService
                 'method' => $paymentData['method'], // CASH, QRIS
                 'transaction_status' => 'settlement',
                 'external_id' => $paymentData['external_id'] ?? null,
+                'payment_details' => $paymentData['payment_details'] ?? null,
                 'paid_at' => now(),
             ]);
 
