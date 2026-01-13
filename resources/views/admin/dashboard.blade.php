@@ -204,8 +204,8 @@
                                         <span class="px-2 py-1 rounded text-[10px] font-bold uppercase" :class="{
                                                 'bg-purple-100 text-purple-700': user.role === 'admin',
                                                 'bg-blue-100 text-blue-700': user.role === 'cashier',
-                                                'bg-orange-100 text-orange-700': user.role === 'kitchen'
-                                            }" x-text="user.role"></span>
+                                                'bg-orange-100 text-orange-700': user.role === 'kitchen' || user.role === 'chef'
+                                            }" x-text="user.role === 'chef' ? 'kitchen' : user.role"></span>
                                     </td>
                                     <td class="p-4 text-right space-x-2">
                                         <button @click="openUserModal(user)"
@@ -396,7 +396,7 @@
                     <label class="block text-sm font-bold text-gray-700 mb-1">Role</label>
                     <select x-model="userForm.role" class="w-full border rounded p-2 outline-none bg-white">
                         <option value="cashier">Cashier</option>
-                        <option value="kitchen">Kitchen</option>
+                        <option value="chef">Kitchen</option>
                         <option value="admin">Admin (Manager)</option>
                     </select>
                 </div>

@@ -39,7 +39,7 @@ class AdminUserController extends Controller
                 Rule::unique('users'),
             ],
             'password' => 'required|string|min:8',
-            'role' => 'required|in:admin,cashier,kitchen',
+            'role' => 'required|in:admin,cashier,chef',
         ]);
 
         $user = User::create([
@@ -73,7 +73,7 @@ class AdminUserController extends Controller
                 Rule::unique('users')->ignore($user->id),
             ],
             'password' => 'nullable|string|min:8',
-            'role' => 'required|in:admin,cashier,kitchen',
+            'role' => 'required|in:admin,cashier,chef',
         ]);
 
         $data = [
