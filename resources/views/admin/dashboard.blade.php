@@ -31,6 +31,11 @@
                     class="w-full text-left px-4 py-3 rounded transition flex items-center gap-3">
                     📂 Manajemen Kategori
                 </button>
+                <button @click="activeTab = 'users'"
+                    :class="activeTab === 'users' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:bg-gray-800'"
+                    class="w-full text-left px-4 py-3 rounded transition flex items-center gap-3">
+                    👥 Manajemen User
+                </button>
                 <button @click="activeTab = 'sales'"
                     :class="activeTab === 'sales' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:bg-gray-800'"
                     class="w-full text-left px-4 py-3 rounded transition flex items-center gap-3">
@@ -165,6 +170,55 @@
                             </button>
                         </div>
                     </template>
+                </div>
+            </div>
+
+            <!-- Tab: User Management -->
+            <div x-show="activeTab === 'users'" x-init="$watch('activeTab', v => { if(v==='users') fetchUsers() })">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Manajemen User (Staff)</h2>
+                    <button @click="openUserModal()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow flex items-center gap-2 text-sm">
+                        <span>+</span> <span>Tambah User</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase border-b">
+                            <tr>
+                                <th class="p-4">Nama</th>
+                                <th class="p-4">Email</th>
+                                <th class="p-4">Role</th>
+                                <th class="p-4 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <template x-for="user in users" :key="user.id">
+                                <tr class="hover:bg-gray-50 transition border-b last:border-0 border-gray-100">
+                                    <td class="p-4">
+                                        <div class="font-bold text-gray-800" x-text="user.name"></div>
+                                    </td>
+                                    <td class="p-4 text-gray-600 text-sm" x-text="user.email"></td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-1 rounded text-[10px] font-bold uppercase" :class="{
+                                                'bg-purple-100 text-purple-700': user.role === 'admin',
+                                                'bg-blue-100 text-blue-700': user.role === 'cashier',
+                                                'bg-orange-100 text-orange-700': user.role === 'kitchen'
+                                            }" x-text="user.role"></span>
+                                    </td>
+                                    <td class="p-4 text-right space-x-2">
+                                        <button @click="openUserModal(user)"
+                                            class="text-blue-600 hover:text-blue-800 font-bold text-sm">Edit</button>
+                                        <template x-if="user.id !== currentUser.id">
+                                            <button @click="deleteUser(user.id)"
+                                                class="text-red-500 hover:text-red-700 font-bold text-sm">Hapus</button>
+                                        </template>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -319,212 +373,320 @@
                     class="px-4 py-2 bg-orange-600 text-white font-bold rounded hover:bg-orange-700">Simpan</button>
             </div>
         </div>
-    </div>
+        <!-- Modal Form User -->
+        <div x-show="showUserModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            style="display: none;">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative"
+                @click.outside="showUserModal = false">
+                <h3 class="font-bold text-xl mb-4" x-text="userForm.id ? 'Edit User Staff' : 'Tambah User Staff Baru'">
+                </h3>
 
-    <script>
-        function adminApp() {
-            return {
-                token: localStorage.getItem('admin_token'),
-                currentUser: JSON.parse(localStorage.getItem('admin_user') || '{}'),
-                activeTab: 'menu',
-                menus: [],
-                categories: [],
-                newCategoryName: '',
-                report: { summary: {}, transactions: [] },
-                showModal: false,
-                form: { id: null, name: '', price: 0, category: '', image_url: '' },
-                searchQuery: '',
-                sortBy: 'name',
-                sortDir: 'asc',
-                isDragging: false,
-                imagePreview: null,
-                uploadedFile: null,
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Nama Lengkap</label>
+                        <input type="text" x-model="userForm.name"
+                            class="w-full border rounded p-2 focus:ring-2 ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Email</label>
+                        <input type="email" x-model="userForm.email"
+                            class="w-full border rounded p-2 focus:ring-2 ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Role</label>
+                        <select x-model="userForm.role" class="w-full border rounded p-2 outline-none bg-white">
+                            <option value="cashier">Cashier</option>
+                            <option value="kitchen">Kitchen</option>
+                            <option value="admin">Admin (Manager)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Password</label>
+                        <input type="password" x-model="userForm.password"
+                            class="w-full border rounded p-2 focus:ring-2 ring-blue-500 outline-none"
+                            :placeholder="userForm.id ? '(Kosongkan jika tidak ingin ganti)' : 'Masukkan password'">
+                    </div>
+                </div>
 
-                // Helper: Get API Base URL dynamically
-                get apiBase() {
-                    // Logic: /admin/dashboard -> /api/v1
-                    // Logic: /resto-bootcamp/admin/dashboard -> /resto-bootcamp/api/v1
-                    const basePath = window.location.pathname.split('/admin/')[0];
-                    return basePath + '/api/v1';
-                },
+                <div class="mt-6 flex justify-end gap-3">
+                    <button @click="showUserModal = false"
+                        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Batal</button>
+                    <button @click="saveUser" :disabled="isSavingUser"
+                        class="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 disabled:opacity-50">
+                        <span x-text="isSavingUser ? 'Menyimpan...' : 'Simpan User'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                // Helper: Get Route Base URL dynamically
-                get routeBase() {
-                    return window.location.pathname.split('/admin/')[0];
-                },
+        <script>
+            function adminApp() {
+                return {
+                    token: localStorage.getItem('admin_token'),
+                    currentUser: JSON.parse(localStorage.getItem('admin_user') || '{}'),
+                    activeTab: 'menu',
+                    menus: [],
+                    categories: [],
+                    users: [],
+                    newCategoryName: '',
+                    showUserModal: false,
+                    userForm: { id: null, name: '', email: '', role: 'cashier', password: '' },
+                    isSavingUser: false,
+                    report: { summary: {}, transactions: [] },
+                    showModal: false,
+                    form: { id: null, name: '', price: 0, category: '', image_url: '' },
+                    searchQuery: '',
+                    sortBy: 'name',
+                    sortDir: 'asc',
+                    isDragging: false,
+                    imagePreview: null,
+                    uploadedFile: null,
 
-                async init() {
-                    if (!this.token) {
+                    // Helper: Get API Base URL dynamically
+                    get apiBase() {
+                        // Logic: /admin/dashboard -> /api/v1
+                        // Logic: /resto-bootcamp/admin/dashboard -> /resto-bootcamp/api/v1
+                        const basePath = window.location.pathname.split('/admin/')[0];
+                        return basePath + '/api/v1';
+                    },
+
+                    // Helper: Get Route Base URL dynamically
+                    get routeBase() {
+                        return window.location.pathname.split('/admin/')[0];
+                    },
+
+                    async init() {
+                        if (!this.token) {
+                            window.location.href = this.routeBase + '/admin/login';
+                            return;
+                        }
+                        await this.fetchCategories();
+                        await this.fetchMenus();
+                    },
+
+                    get filteredMenus() {
+                        let result = this.menus;
+                        if (this.searchQuery) {
+                            const lower = this.searchQuery.toLowerCase();
+                            result = result.filter(m => m.name.toLowerCase().includes(lower) || m.category.toLowerCase().includes(lower));
+                        }
+                        result = result.sort((a, b) => {
+                            let valA = a[this.sortBy]; let valB = b[this.sortBy];
+                            if (typeof valA === 'string') valA = valA.toLowerCase();
+                            if (typeof valB === 'string') valB = valB.toLowerCase();
+                            if (valA < valB) return this.sortDir === 'asc' ? -1 : 1;
+                            if (valA > valB) return this.sortDir === 'asc' ? 1 : -1;
+                            return 0;
+                        });
+                        return result;
+                    },
+
+                    sort(column) {
+                        if (this.sortBy === column) { this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc'; }
+                        else { this.sortBy = column; this.sortDir = 'asc'; }
+                    },
+
+                    async fetchCategories() {
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/categories`, {
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
+                            });
+                            if (res.ok) { let data = await res.json(); this.categories = data; }
+                        } catch (e) { }
+                    },
+
+                    async createCategory() {
+                        if (!this.newCategoryName) return;
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/categories`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
+                                body: JSON.stringify({ name: this.newCategoryName })
+                            });
+                            if (res.ok) { this.newCategoryName = ''; await this.fetchCategories(); }
+                            else alert('Gagal buat kategori');
+                        } catch (e) { }
+                    },
+
+                    async updateCategory(cat) {
+                        try {
+                            await fetch(`${this.apiBase}/admin/categories/${cat.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
+                                body: JSON.stringify({ name: cat.name })
+                            });
+                        } catch (e) { }
+                    },
+
+                    async deleteCategory(id) {
+                        if (!confirm('Hapus kategori ini?')) return;
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/categories/${id}`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
+                            });
+                            if (res.ok) this.fetchCategories();
+                        } catch (e) { }
+                    },
+
+                    async fetchUsers() {
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/users`, {
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
+                            });
+                            if (res.ok) { this.users = await res.json(); }
+                        } catch (e) { }
+                    },
+
+                    openUserModal(user = null) {
+                        if (user) {
+                            this.userForm = { id: user.id, name: user.name, email: user.email, role: user.role, password: '' };
+                        } else {
+                            this.userForm = { id: null, name: '', email: '', role: 'cashier', password: '' };
+                        }
+                        this.showUserModal = true;
+                    },
+
+                    async saveUser() {
+                        this.isSavingUser = true;
+                        try {
+                            let url = `${this.apiBase}/admin/users`;
+                            let method = 'POST';
+                            if (this.userForm.id) {
+                                url += `/${this.userForm.id}`;
+                                method = 'PUT';
+                            }
+
+                            let res = await fetch(url, {
+                                method: method,
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
+                                body: JSON.stringify(this.userForm)
+                            });
+
+                            let result = await res.json();
+                            if (res.ok) {
+                                this.showUserModal = false;
+                                await this.fetchUsers();
+                            } else {
+                                alert('Gagal simpan user: ' + (result.message || 'Error'));
+                            }
+                        } catch (e) {
+                            alert('System error');
+                        } finally {
+                            this.isSavingUser = false;
+                        }
+                    },
+
+                    async deleteUser(id) {
+                        if (!confirm('Hapus user ini?')) return;
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/users/${id}`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
+                            });
+                            if (res.ok) this.fetchUsers();
+                            else alert('Gagal hapus user');
+                        } catch (e) { }
+                    },
+
+                    async fetchMenus() {
+                        try {
+                            // Fix for default route
+                            let res = await fetch(`${this.apiBase}/restaurants/${this.currentUser.restaurant_id || 1}/menu`);
+                            let data = await res.json();
+                            this.menus = data.menus;
+                        } catch (e) { alert('Gagal memuat menu'); }
+                    },
+
+                    async fetchReports() {
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/reports`, {
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
+                            });
+                            let data = await res.json();
+                            this.report = data;
+                        } catch (e) { }
+                    },
+
+                    openModal(menu = null) {
+                        this.fetchCategories();
+                        this.uploadedFile = null; this.isDragging = false;
+                        if (menu) {
+                            this.form = { ...menu };
+                            this.imagePreview = menu.image_url;
+                        } else {
+                            let defaultCat = this.categories.length > 0 ? this.categories[0].name : '';
+                            this.form = { id: null, name: '', price: 0, category: defaultCat, image_url: '' };
+                            this.imagePreview = null;
+                        }
+                        this.showModal = true;
+                    },
+
+                    handleDrop(e) { this.isDragging = false; if (e.dataTransfer.files.length > 0) this.processFile(e.dataTransfer.files[0]); },
+                    handleFile(e) { if (e.target.files.length > 0) this.processFile(e.target.files[0]); },
+                    processFile(file) {
+                        if (!file.type.startsWith('image/')) return alert('File harus gambar!');
+                        this.uploadedFile = file;
+                        const reader = new FileReader();
+                        reader.onload = (e) => this.imagePreview = e.target.result;
+                        reader.readAsDataURL(file);
+                    },
+                    removeImage() { this.uploadedFile = null; this.imagePreview = null; this.form.image_url = ''; },
+
+                    async saveMenu() {
+                        const isEdit = !!this.form.id;
+                        const url = isEdit ? `${this.apiBase}/admin/menus/${this.form.id}` : `${this.apiBase}/admin/menus`;
+                        const formData = new FormData();
+                        formData.append('name', this.form.name);
+                        formData.append('price', this.form.price);
+                        formData.append('category', this.form.category);
+                        if (this.form.image_url) formData.append('image_url', this.form.image_url);
+                        if (this.uploadedFile) formData.append('image', this.uploadedFile);
+                        if (isEdit) formData.append('_method', 'PUT');
+
+                        try {
+                            let res = await fetch(url, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
+                                body: formData
+                            });
+                            if (res.ok) { this.showModal = false; this.fetchMenus(); }
+                            else { let d = await res.json(); alert('Gagal: ' + (d.message || JSON.stringify(d.errors))); }
+                        } catch (e) { alert('Error system'); }
+                    },
+
+                    async deleteMenu(id) {
+                        if (!confirm('Hapus menu ini?')) return;
+                        try {
+                            let res = await fetch(`${this.apiBase}/admin/menus/${id}`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
+                            });
+                            if (res.ok) this.fetchMenus();
+                        } catch (e) { }
+                    },
+
+                    async toggleAvailability(menu) {
+                        try {
+                            menu.is_available = !menu.is_available;
+                            let res = await fetch(`${this.apiBase}/admin/menus/${menu.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
+                                body: JSON.stringify({ is_available: menu.is_available })
+                            });
+                            if (!res.ok) { menu.is_available = !menu.is_available; alert('Gagal update'); }
+                        } catch (e) { menu.is_available = !menu.is_available; }
+                    },
+                    formatRupiah(num) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num); },
+                    formatDate(dateStr) { return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); },
+
+                    logout() {
+                        localStorage.removeItem('admin_token');
                         window.location.href = this.routeBase + '/admin/login';
-                        return;
                     }
-                    await this.fetchCategories();
-                    await this.fetchMenus();
-                },
-
-                get filteredMenus() {
-                    let result = this.menus;
-                    if (this.searchQuery) {
-                        const lower = this.searchQuery.toLowerCase();
-                        result = result.filter(m => m.name.toLowerCase().includes(lower) || m.category.toLowerCase().includes(lower));
-                    }
-                    result = result.sort((a, b) => {
-                        let valA = a[this.sortBy]; let valB = b[this.sortBy];
-                        if (typeof valA === 'string') valA = valA.toLowerCase();
-                        if (typeof valB === 'string') valB = valB.toLowerCase();
-                        if (valA < valB) return this.sortDir === 'asc' ? -1 : 1;
-                        if (valA > valB) return this.sortDir === 'asc' ? 1 : -1;
-                        return 0;
-                    });
-                    return result;
-                },
-
-                sort(column) {
-                    if (this.sortBy === column) { this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc'; }
-                    else { this.sortBy = column; this.sortDir = 'asc'; }
-                },
-
-                async fetchCategories() {
-                    try {
-                        let res = await fetch(`${this.apiBase}/admin/categories`, {
-                            headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
-                        });
-                        if (res.ok) { let data = await res.json(); this.categories = data; }
-                    } catch (e) { }
-                },
-
-                async createCategory() {
-                    if (!this.newCategoryName) return;
-                    try {
-                        let res = await fetch(`${this.apiBase}/admin/categories`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
-                            body: JSON.stringify({ name: this.newCategoryName })
-                        });
-                        if (res.ok) { this.newCategoryName = ''; await this.fetchCategories(); }
-                        else alert('Gagal buat kategori');
-                    } catch (e) { }
-                },
-
-                async updateCategory(cat) {
-                    try {
-                        await fetch(`${this.apiBase}/admin/categories/${cat.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
-                            body: JSON.stringify({ name: cat.name })
-                        });
-                    } catch (e) { }
-                },
-
-                async deleteCategory(id) {
-                    if (!confirm('Hapus kategori ini?')) return;
-                    try {
-                        let res = await fetch(`${this.apiBase}/admin/categories/${id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
-                        });
-                        if (res.ok) this.fetchCategories();
-                    } catch (e) { }
-                },
-
-                async fetchMenus() {
-                    try {
-                        // Fix for default route
-                        let res = await fetch(`${this.apiBase}/restaurants/${this.currentUser.restaurant_id || 1}/menu`);
-                        let data = await res.json();
-                        this.menus = data.menus;
-                    } catch (e) { alert('Gagal memuat menu'); }
-                },
-
-                async fetchReports() {
-                    try {
-                        let res = await fetch(`${this.apiBase}/admin/reports`, {
-                            headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
-                        });
-                        let data = await res.json();
-                        this.report = data;
-                    } catch (e) { }
-                },
-
-                openModal(menu = null) {
-                    this.fetchCategories();
-                    this.uploadedFile = null; this.isDragging = false;
-                    if (menu) {
-                        this.form = { ...menu };
-                        this.imagePreview = menu.image_url;
-                    } else {
-                        let defaultCat = this.categories.length > 0 ? this.categories[0].name : '';
-                        this.form = { id: null, name: '', price: 0, category: defaultCat, image_url: '' };
-                        this.imagePreview = null;
-                    }
-                    this.showModal = true;
-                },
-
-                handleDrop(e) { this.isDragging = false; if (e.dataTransfer.files.length > 0) this.processFile(e.dataTransfer.files[0]); },
-                handleFile(e) { if (e.target.files.length > 0) this.processFile(e.target.files[0]); },
-                processFile(file) {
-                    if (!file.type.startsWith('image/')) return alert('File harus gambar!');
-                    this.uploadedFile = file;
-                    const reader = new FileReader();
-                    reader.onload = (e) => this.imagePreview = e.target.result;
-                    reader.readAsDataURL(file);
-                },
-                removeImage() { this.uploadedFile = null; this.imagePreview = null; this.form.image_url = ''; },
-
-                async saveMenu() {
-                    const isEdit = !!this.form.id;
-                    const url = isEdit ? `${this.apiBase}/admin/menus/${this.form.id}` : `${this.apiBase}/admin/menus`;
-                    const formData = new FormData();
-                    formData.append('name', this.form.name);
-                    formData.append('price', this.form.price);
-                    formData.append('category', this.form.category);
-                    if (this.form.image_url) formData.append('image_url', this.form.image_url);
-                    if (this.uploadedFile) formData.append('image', this.uploadedFile);
-                    if (isEdit) formData.append('_method', 'PUT');
-
-                    try {
-                        let res = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
-                            body: formData
-                        });
-                        if (res.ok) { this.showModal = false; this.fetchMenus(); }
-                        else { let d = await res.json(); alert('Gagal: ' + (d.message || JSON.stringify(d.errors))); }
-                    } catch (e) { alert('Error system'); }
-                },
-
-                async deleteMenu(id) {
-                    if (!confirm('Hapus menu ini?')) return;
-                    try {
-                        let res = await fetch(`${this.apiBase}/admin/menus/${id}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' }
-                        });
-                        if (res.ok) this.fetchMenus();
-                    } catch (e) { }
-                },
-
-                async toggleAvailability(menu) {
-                    try {
-                        menu.is_available = !menu.is_available;
-                        let res = await fetch(`${this.apiBase}/admin/menus/${menu.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}`, 'Accept': 'application/json' },
-                            body: JSON.stringify({ is_available: menu.is_available })
-                        });
-                        if (!res.ok) { menu.is_available = !menu.is_available; alert('Gagal update'); }
-                    } catch (e) { menu.is_available = !menu.is_available; }
-                },
-                formatRupiah(num) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num); },
-                formatDate(dateStr) { return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); },
-
-                logout() {
-                    localStorage.removeItem('admin_token');
-                    window.location.href = this.routeBase + '/admin/login';
                 }
             }
-        }
-    </script>
+        </script>
 </body>
 
 </html>
