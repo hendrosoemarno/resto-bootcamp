@@ -30,6 +30,11 @@ Route::prefix('v1')->group(function () {
     // Payment Callback (Simulated Webhook - Public for Gateway access)
     Route::post('/payments/callback', [PaymentController::class, 'callback']);
 
+    // Duitku Payment Gateway
+    Route::post('/payment/duitku/create', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'createPayment']);
+    Route::post('/payment/duitku/callback', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'callback']);
+    Route::post('/payment/duitku/check-status', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'checkStatus']);
+
 });
 
 // Staff Routes (Protected)

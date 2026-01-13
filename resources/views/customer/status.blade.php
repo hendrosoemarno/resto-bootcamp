@@ -19,7 +19,7 @@
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 text-center"
-        x-data="orderStatus('{{ $order->order_number }}', '{{ $order->status }}', '{{ $order->payment_status }}')">
+        x-data="orderStatus('{{ $order->order_number }}', '{{ $order->status }}', '{{ $order->payment_status }}', {{ $order->id }})">
 
         <!-- Icon Status -->
         <div class="mb-4 flex justify-center">
@@ -80,37 +80,45 @@
         <!-- Action: Pay (If Pending) -->
         <template x-if="paymentStatus === 'UNPAID'">
             <div class="space-y-3">
-                <p class="text-xs text-gray-400">Silakan lakukan pembayaran di kasir atau via QRIS.</p>
-                <!-- Simulation Button for Dev -->
-                <button @click="simulatePay()" :disabled="isPaying"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
-                    <span x-text="isPaying ? 'Processing...' : '💳 Simulasi Bayar QRIS'"></span>
+                <p class="text-xs text-gray-400">Silakan lakukan pembayaran secara online atau di kasir.</p>
+                
+                <!-- Action: Duitku Online Payment -->
+                <button @click="payWithDuitku()" :disabled="isPaying"
+                    class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                    <span x-show="isPaying" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    <span x-text="isPaying ? 'Menghubungkan...' : '💳 Bayar Sekarang (Online)'"></span>
                 </button>
 
                 <!-- Action: Manual Pay Instruction -->
                 <button @click="showCashierInstruction = true"
-                    class="w-full bg-gray-100 border border-gray-300 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition hover:bg-gray-200">
+                    class="w-full bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition hover:bg-gray-100">
                     💵 Bayar Tunai di Kasir
                 </button>
-            </div>
-
-            <!-- Cashier Instruction Modal -->
-            <div x-show="showCashierInstruction"
-                class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" style="display: none;">
-                <div class="bg-white rounded-2xl p-6 max-w-sm text-center shadow-2xl"
-                    @click.outside="showCashierInstruction = false">
-                    <div class="text-4xl mb-4">🏪</div>
-                    <h3 class="font-bold text-lg mb-2">Bayar di Kasir</h3>
-                    <p class="text-gray-600 text-sm mb-6">Silakan menuju meja kasir dan sebutkan Nomor Order Anda:</p>
-                    <div
-                        class="bg-gray-100 p-4 rounded-xl font-mono text-2xl font-bold text-blue-600 mb-6 tracking-wider">
-                        <span x-text="orderNumber.split('-').pop()"></span>
-                    </div>
-                    <button @click="showCashierInstruction = false"
-                        class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Tutup</button>
-                </div>
+                
+                <!-- Simulation Button for Dev -->
+                <button @click="simulatePay()" 
+                    class="w-full text-xs text-gray-400 hover:text-gray-600 transition">
+                    (Simulasi Bayar QRIS)
+                </button>
             </div>
         </template>
+
+        <!-- Cashier Instruction Modal -->
+        <div x-show="showCashierInstruction"
+            class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" style="display: none;">
+            <div class="bg-white rounded-2xl p-6 max-w-sm text-center shadow-2xl"
+                @click.outside="showCashierInstruction = false">
+                <div class="text-4xl mb-4">🏪</div>
+                <h3 class="font-bold text-lg mb-2">Bayar di Kasir</h3>
+                <p class="text-gray-600 text-sm mb-6">Silakan menuju meja kasir dan sebutkan Nomor Order Anda:</p>
+                <div
+                    class="bg-gray-100 p-4 rounded-xl font-mono text-2xl font-bold text-blue-600 mb-6 tracking-wider">
+                    <span x-text="orderNumber.split('-').pop()"></span>
+                </div>
+                <button @click="showCashierInstruction = false"
+                    class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Tutup</button>
+            </div>
+        </div>
 
         <!-- Action: Ready Message -->
         <template x-if="status === 'READY'">
@@ -124,22 +132,27 @@
     </div>
 
     <script>
-        function orderStatus(orderNumber, initialStatus, initialPayment) {
+        function orderStatus(orderNumber, initialStatus, initialPayment, orderId) {
             return {
                 orderNumber: orderNumber,
+                orderId: orderId,
                 status: initialStatus,
                 paymentStatus: initialPayment,
                 isPaying: false,
                 showCashierInstruction: false,
 
-                init() {
-                    // Polling fallback (every 5s) if realtime fails
-                    setInterval(() => {
-                        this.checkStatus();
-                    }, 5000);
+                // Helper: Get API Base URL dynamically
+                get apiBase() {
+                    const basePath = window.location.pathname.split('/order/status')[0];
+                    return basePath + '/api/v1';
+                },
 
-                    // Future: Pusher Realtime Listener here
-                    // channel.bind('order.status.updated', ...)
+                init() {
+                    setInterval(() => {
+                        if (this.paymentStatus === 'UNPAID' || (this.status !== 'COMPLETED')) {
+                            this.checkStatus();
+                        }
+                    }, 5000);
                 },
 
                 statusLabel() {
@@ -156,7 +169,7 @@
 
                 async checkStatus() {
                     try {
-                        let res = await fetch(`{{ url('/api/v1/orders') }}/${this.orderNumber}`);
+                        let res = await fetch(`${this.apiBase}/orders/${this.orderNumber}`);
                         let data = await res.json();
                         if (data.status) {
                             this.status = data.status;
@@ -165,35 +178,56 @@
                     } catch (e) { console.error('Polling error', e); }
                 },
 
-                async simulatePay() {
-                    if (!confirm('Simulasikan pembayaran sukses?')) return;
+                async payWithDuitku() {
                     this.isPaying = true;
                     try {
-                        let res = await fetch('{{ url('/api/v1/payments/callback') }}', {
+                        let res = await fetch(`${this.apiBase}/payment/duitku/create`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            body: JSON.stringify({ order_id: this.orderId })
+                        });
+
+                        let result = await res.json();
+
+                        if (res.ok && result.data.payment_url) {
+                            window.location.href = result.data.payment_url;
+                        } else {
+                            alert('Gagal membuat pembayaran: ' + (result.message || 'Unknown error'));
+                        }
+                    } catch (e) {
+                        alert('Error system: ' + e.message);
+                    } finally {
+                        this.isPaying = false;
+                    }
+                },
+
+                async simulatePay() {
+                    if (!confirm('Simulasikan pembayaran sukses?')) return;
+                    try {
+                        let res = await fetch(`${this.apiBase}/payments/callback`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 order_number: this.orderNumber,
-                                amount: {{ $order->total_amount }}, // Blade injection
+                                amount: {{ $order->total_amount }},
                                 status: 'settlement',
                                 method: 'QRIS_SIMULATOR'
                             })
                         });
 
                         if (res.ok) {
-                            this.checkStatus(); // Force refresh
+                            this.checkStatus();
                         } else {
                             alert('Gagal simulasi bayar.');
                         }
                     } catch (e) {
                         alert('Error');
-                    } finally {
-                        this.isPaying = false;
                     }
                 }
             }
         }
     </script>
+
 </body>
 
 </html>
