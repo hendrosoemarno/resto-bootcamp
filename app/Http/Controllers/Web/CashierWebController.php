@@ -16,4 +16,11 @@ class CashierWebController extends Controller
     {
         return view('cashier.dashboard');
     }
+
+    public function printReceipt($id)
+    {
+        $order = \App\Models\Order::with(['items.menu', 'table', 'restaurant'])->findOrFail($id);
+
+        return view('cashier.receipt', compact('order'));
+    }
 }

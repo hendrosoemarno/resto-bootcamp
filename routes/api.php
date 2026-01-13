@@ -46,11 +46,17 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     // Cashier: Manual Payment
     Route::post('/cashier/payments/confirm', [PaymentController::class, 'manualConfirm']);
 
-    // Cashier: List Unpaid Orders (Quick Inline Route for now)
+    // Cashier: List Orders (Unpaid and Recent Paid for today)
     Route::get('/cashier/orders', function (Request $request) {
         return \App\Models\Order::with(['items.menu', 'table'])
             ->where('restaurant_id', $request->user()->restaurant_id)
-            ->where('payment_status', 'UNPAID')
+            ->where(function ($q) {
+                $q->where('payment_status', 'UNPAID')
+                    ->orWhere(function ($q2) {
+                        $q2->where('payment_status', 'PAID')
+                            ->whereDate('updated_at', now()->toDateString());
+                    });
+            })
             ->orderBy('created_at', 'desc')
             ->get();
     });

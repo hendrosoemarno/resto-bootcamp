@@ -90,6 +90,47 @@
             </div>
         </div>
 
+        <!-- Recently Paid (To Print) -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mt-8">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="font-bold text-lg text-gray-800">Pesanan Selesai / Dibayar (Hari Ini)</h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Order No</th>
+                            <th class="p-4">Pelanggan</th>
+                            <th class="p-4">Total</th>
+                            <th class="p-4 text-center">Nota</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y text-sm">
+                        <template x-if="paidOrders.length === 0">
+                            <tr>
+                                <td colspan="4" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang dibayar hari ini.</td>
+                            </tr>
+                        </template>
+
+                        <template x-for="order in paidOrders" :key="order.id">
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="p-4 font-mono font-bold" x-text="order.order_number"></td>
+                                <td class="p-4" x-text="order.customer_name"></td>
+                                <td class="p-4 font-bold" x-text="formatRupiah(order.total_amount)"></td>
+                                <td class="p-4 text-center">
+                                    <button @click="printReceipt(order.id)"
+                                        class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded-md text-xs font-bold transition">
+                                        🖨️ Re-Print
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </main>
 
     <!-- Payment Modal -->
@@ -157,6 +198,15 @@
                     return this.orders.filter(o => o.payment_status === 'UNPAID' && o.status !== 'COMPLETED');
                 },
 
+                get paidOrders() {
+                    return this.orders.filter(o => o.payment_status === 'PAID').sort((a,b) => b.id - a.id);
+                },
+
+                printReceipt(id) {
+                    const printUrl = `${this.routeBase}/cashier/order/${id}/print`;
+                    window.open(printUrl, '_blank');
+                },
+
                 async fetchOrders() {
                     try {
                         let res = await fetch(`${this.apiBase}/cashier/orders`, {
@@ -189,6 +239,11 @@
 
                         if (res.ok) {
                             alert('Pembayaran Berhasil!');
+
+                            // Buka nota di tab baru
+                            const printUrl = `${this.routeBase}/cashier/order/${this.selectedOrder.id}/print`;
+                            window.open(printUrl, '_blank');
+
                             this.selectedOrder = null;
                             this.fetchOrders();
                         } else {

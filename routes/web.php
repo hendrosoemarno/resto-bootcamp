@@ -21,6 +21,7 @@ Route::get('/kitchen/dashboard', [\App\Http\Controllers\Web\KitchenWebController
 // Cashier Pages (Staff)
 Route::get('/cashier/login', [\App\Http\Controllers\Web\CashierWebController::class, 'login'])->name('cashier.login');
 Route::get('/cashier/dashboard', [\App\Http\Controllers\Web\CashierWebController::class, 'dashboard'])->name('cashier.dashboard');
+Route::get('/cashier/order/{id}/print', [\App\Http\Controllers\Web\CashierWebController::class, 'printReceipt'])->name('cashier.order.print');
 
 // Display Screen (Public TV)
 Route::get('/display/{restaurantId}', [\App\Http\Controllers\Web\DisplayWebController::class, 'show'])->name('display.queue');
