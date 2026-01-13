@@ -109,6 +109,7 @@
                             <th class="p-4">Order No</th>
                             <th class="p-4">Pelanggan</th>
                             <th class="p-4">Total</th>
+                            <th class="p-4">Metode</th>
                             <th class="p-4">Bayar</th>
                             <th class="p-4">Kembali</th>
                             <th class="p-4 text-center">Nota</th>
@@ -117,7 +118,7 @@
                     <tbody class="divide-y text-sm">
                         <template x-if="paidOrders.length === 0">
                             <tr>
-                                <td colspan="6" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang
+                                <td colspan="7" class="p-8 text-center text-gray-400 text-xs">Belum ada pesanan yang
                                     dibayar hari ini.</td>
                             </tr>
                         </template>
@@ -127,6 +128,18 @@
                                 <td class="p-4 font-mono font-bold" x-text="order.order_number"></td>
                                 <td class="p-4" x-text="order.customer_name"></td>
                                 <td class="p-4 font-bold" x-text="formatRupiah(order.total_amount)"></td>
+                                <td class="p-4">
+                                    <template x-if="order.payment?.method === 'CASH'">
+                                        <span
+                                            class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-[10px] font-bold">TUNAI
+                                            💵</span>
+                                    </template>
+                                    <template x-if="order.payment?.method !== 'CASH'">
+                                        <span
+                                            class="bg-purple-100 text-purple-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase"
+                                            x-text="order.payment?.method.replace('DUITKU-', '') || 'ONLINE 💳'"></span>
+                                    </template>
+                                </td>
                                 <td class="p-4 text-green-600 font-medium">
                                     <span x-text="getPaymentDetail(order, 'cash_received')"></span>
                                 </td>
@@ -337,9 +350,11 @@
                 },
 
                 getPaymentDetail(order, key) {
-                    if (!order.payment || !order.payment.payment_details) return '-';
+                    if (!order.payment || order.payment.method !== 'CASH' || !order.payment.payment_details) return '-';
                     try {
-                        const details = JSON.parse(order.payment.payment_details);
+                        const details = typeof order.payment.payment_details === 'string'
+                            ? JSON.parse(order.payment.payment_details)
+                            : order.payment.payment_details;
                         return this.formatRupiah(details[key] || 0);
                     } catch (e) {
                         return '-';

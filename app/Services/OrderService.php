@@ -22,15 +22,17 @@ class OrderService
 
         return DB::transaction(function () use ($order, $paymentData, $userId) {
             // 1. Create Payment Record
-            Payment::create([
-                'order_id' => $order->id,
-                'amount' => $paymentData['amount'],
-                'method' => $paymentData['method'], // CASH, QRIS
-                'transaction_status' => 'settlement',
-                'external_id' => $paymentData['external_id'] ?? null,
-                'payment_details' => $paymentData['payment_details'] ?? null,
-                'paid_at' => now(),
-            ]);
+            Payment::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'amount' => $paymentData['amount'],
+                    'method' => $paymentData['method'], // CASH, QRIS
+                    'transaction_status' => 'settlement',
+                    'external_id' => $paymentData['external_id'] ?? null,
+                    'payment_details' => $paymentData['payment_details'] ?? null,
+                    'paid_at' => now(),
+                ]
+            );
 
             // 2. Update Order Status
             // From PENDING -> PAID (Financial) -> QUEUED (Kitchen)
