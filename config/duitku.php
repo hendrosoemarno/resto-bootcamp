@@ -22,5 +22,7 @@ return [
     'callback_url' => env('APP_URL') . '/api/v1/payment/duitku/callback',
     'return_url' => env('APP_URL') . '/order/payment/success',
 
+    'payment_method' => env('DUITKU_PAYMENT_METHOD', 'SP'),
+
     'expiry_period' => 60, // in minutes
 ];

@@ -69,7 +69,7 @@ class DuitkuService
     {
         $merchantOrderId = $order->order_number;
         $paymentAmount = (int) $order->total_amount;
-        $paymentMethod = 'SP'; // Default to QRIS (Shopee Pay)
+        $paymentMethod = config('duitku.payment_method', 'SP'); // Ambil dari config
         $productDetails = "Order #{$order->order_number} - {$order->restaurant->name}";
         $customerVaName = $order->customer_name;
         $email = $order->customer_email ?? 'customer@resto.com';
