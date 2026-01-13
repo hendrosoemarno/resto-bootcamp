@@ -130,9 +130,16 @@ class DuitkuService
             }
 
             $errorResponse = $response->json();
+
+            // Log full error for production debugging
+            Log::error('Duitku Production Error Response:', [
+                'body' => $response->body(),
+                'status' => $response->status()
+            ]);
+
             return [
                 'success' => false,
-                'message' => $errorResponse['statusMessage'] ?? 'Failed to create transaction',
+                'message' => $errorResponse['statusMessage'] ?? ($errorResponse['Message'] ?? 'Failed to create transaction'),
                 'error' => $errorResponse
             ];
         } catch (\Exception $e) {
