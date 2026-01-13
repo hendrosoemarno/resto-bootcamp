@@ -13,7 +13,7 @@
             margin: 0;
             padding: 10px;
             width: 58mm;
-            /* Revert to standard narrow thermal printer width */
+            /* Standard narrow thermal printer width */
             background-color: #fff;
             line-height: 1.2;
         }
@@ -46,7 +46,6 @@
         .info {
             margin-bottom: 10px;
             font-size: 10px;
-            /* Base size requested */
             line-height: 1.3;
         }
 
@@ -101,6 +100,16 @@
             font-weight: bold;
             font-size: 14px;
         }
+
+        /* Area tambahan agar total tidak terpotong saat disobek */
+        .cutting-zone {
+            margin-top: 40px;
+            border-top: 1px dashed #000;
+            text-align: center;
+            font-size: 8px;
+            padding-top: 5px;
+            margin-bottom: 80px;
+        }
     </style>
 </head>
 
@@ -152,6 +161,12 @@
     <div class="footer">
         *** TERIMA KASIH ***<br>
         Silakan berkunjung kembali
+    </div>
+
+    <!-- Garis potong dan spasi tambahan -->
+    <div class="cutting-zone">
+        -------------------------------<br>
+        GUNTING DI SINI / CUT HERE
     </div>
 
 </body>
