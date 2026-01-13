@@ -20,7 +20,7 @@ return [
     ],
 
     'callback_url' => env('APP_URL') . '/api/v1/payment/duitku/callback',
-    'return_url' => env('APP_URL') . '/order/payment/success',
+    'return_url' => env('APP_URL') . '/order/status/{orderNumber}',
 
     'payment_method' => env('DUITKU_PAYMENT_METHOD', 'SP'),
 

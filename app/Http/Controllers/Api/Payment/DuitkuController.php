@@ -22,12 +22,29 @@ class DuitkuController extends Controller
     }
 
     /**
+     * Show payment method selection page
+     */
+    public function selectPayment($orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)->firstOrFail();
+
+        if ($order->payment_status === 'PAID') {
+            return redirect()->route('customer.status', $orderNumber);
+        }
+
+        $methods = $this->duitkuService->getPaymentMethods($order->total_amount);
+
+        return view('customer.select-payment', compact('order', 'methods'));
+    }
+
+    /**
      * Create payment request
      */
     public function createPayment(Request $request)
     {
         $request->validate([
-            'order_id' => 'required|exists:orders,id'
+            'order_id' => 'required|exists:orders,id',
+            'payment_method' => 'required|string'
         ]);
 
         try {
@@ -41,8 +58,10 @@ class DuitkuController extends Controller
                 ], 400);
             }
 
+            // Update order with selected payment method temporarily (optional)
+
             // Create transaction with Duitku
-            $result = $this->duitkuService->createTransaction($order);
+            $result = $this->duitkuService->createTransaction($order, $request->payment_method);
 
             if (!$result['success']) {
                 return response()->json([
@@ -54,15 +73,17 @@ class DuitkuController extends Controller
 
             $duitkuData = $result['data'];
 
-            // Save payment record
-            $payment = Payment::create([
-                'order_id' => $order->id,
-                'amount' => $order->total_amount,
-                'method' => 'DUITKU',
-                'transaction_status' => 'PENDING',
-                'transaction_id' => $duitkuData['reference'] ?? null,
-                'payment_details' => json_encode($duitkuData)
-            ]);
+            // Save or update payment record
+            $payment = Payment::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'amount' => $order->total_amount,
+                    'method' => $request->payment_method,
+                    'transaction_status' => 'PENDING',
+                    'transaction_id' => $duitkuData['reference'] ?? null,
+                    'payment_details' => json_encode($duitkuData)
+                ]
+            );
 
             return response()->json([
                 'success' => true,

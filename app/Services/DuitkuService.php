@@ -13,13 +13,14 @@ class DuitkuService
     protected $callbackUrl;
     protected $returnUrl;
     protected $expiryPeriod;
+    protected $isSandbox;
 
     public function __construct()
     {
         $this->merchantCode = config('duitku.merchant_code');
         $this->apiKey = config('duitku.api_key');
-        $isSandbox = config('duitku.sandbox');
-        $this->baseUrl = $isSandbox ? config('duitku.base_url.sandbox') : config('duitku.base_url.production');
+        $this->isSandbox = config('duitku.sandbox');
+        $this->baseUrl = $this->isSandbox ? config('duitku.base_url.sandbox') : config('duitku.base_url.production');
         $this->callbackUrl = config('duitku.callback_url');
         $this->returnUrl = config('duitku.return_url');
         $this->expiryPeriod = config('duitku.expiry_period');
@@ -27,72 +28,69 @@ class DuitkuService
 
     /**
      * Get available payment methods
+     * Note: Signature uses SHA256 for this endpoint
      */
     public function getPaymentMethods($amount)
     {
+        $amount = (int) $amount;
         $datetime = date('Y-m-d H:i:s');
-        $signature = md5($this->merchantCode . $amount . $datetime . $this->apiKey);
+
+        // SHA256: merchantCode + amount + datetime + apiKey
+        $signature = hash('sha256', $this->merchantCode . $amount . $datetime . $this->apiKey);
+
+        $url = $this->isSandbox
+            ? 'https://sandbox.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod'
+            : 'https://passport.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod';
 
         try {
-            $response = Http::get($this->baseUrl . '/inquiry', [
-                'merchantcode' => $this->merchantCode,
-                'amount' => $amount,
-                'datetime' => $datetime,
-                'signature' => $signature,
-            ]);
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->post($url, [
+                    'merchantcode' => $this->merchantCode,
+                    'amount' => $amount,
+                    'datetime' => $datetime,
+                    'signature' => $signature,
+                ]);
 
             if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'data' => $response->json()
-                ];
+                $data = $response->json();
+                return $data['paymentFee'] ?? [];
             }
-
-            return [
-                'success' => false,
-                'message' => 'Failed to get payment methods',
-                'error' => $response->json()
-            ];
+            return [];
         } catch (\Exception $e) {
             Log::error('Duitku Get Payment Methods Error: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'message' => $e->getMessage()
-            ];
+            return [];
         }
     }
 
     /**
      * Create payment transaction
+     * Note: Signature uses MD5 for this endpoint
      */
-    public function createTransaction($order)
+    public function createTransaction($order, $paymentMethod = null)
     {
         $merchantOrderId = $order->order_number;
         $paymentAmount = (int) $order->total_amount;
-        $paymentMethod = config('duitku.payment_method', 'SP'); // Ambil dari config
-        $productDetails = "Order #{$order->order_number} - {$order->restaurant->name}";
-        $customerVaName = $order->customer_name;
-        $email = $order->customer_email ?? 'customer@resto.com';
-        $phoneNumber = $order->customer_phone ?? '08123456789';
+        $paymentMethod = $paymentMethod ?? config('duitku.payment_method', 'DQ');
+        $productDetails = "Order #{$order->order_number} at " . ($order->restaurant->name ?? 'Resto');
 
+        // Signature: merchantCode + merchantOrderId + paymentAmount + apiKey
         $signature = md5($this->merchantCode . $merchantOrderId . $paymentAmount . $this->apiKey);
 
-        // Build item details
+        // Cleaning Customer Name (Hanya Huruf)
+        $firstName = preg_replace('/[^a-zA-Z ]/', '', $order->customer_name ?? 'Pelanggan');
+        $firstName = substr($firstName, 0, 20);
+
+        // Cleaning Phone Number
+        $phoneNumber = '081234567890'; // Default jika kosong
+
         $itemDetails = [];
         foreach ($order->items as $item) {
             $itemDetails[] = [
-                'name' => $item->menu->name,
+                'name' => substr($item->menu->name, 0, 50),
                 'price' => (int) $item->price,
                 'quantity' => $item->quantity
             ];
         }
-
-        // Customer detail
-        $customerDetail = [
-            'firstName' => $customerVaName,
-            'email' => $email,
-            'phoneNumber' => $phoneNumber,
-        ];
 
         $params = [
             'merchantCode' => $this->merchantCode,
@@ -100,68 +98,55 @@ class DuitkuService
             'paymentMethod' => $paymentMethod,
             'merchantOrderId' => $merchantOrderId,
             'productDetails' => $productDetails,
-            'customerVaName' => $customerVaName,
-            'email' => $email,
+            'additionalParam' => '',
+            'merchantUserInfo' => $order->customer_name,
+            'customerVaName' => $firstName,
+            'email' => 'customer@gmail.com',
             'phoneNumber' => $phoneNumber,
             'itemDetails' => $itemDetails,
-            'customerDetail' => $customerDetail,
             'callbackUrl' => $this->callbackUrl,
-            'returnUrl' => $this->returnUrl,
-            'signature' => $signature,
-            'expiryPeriod' => $this->expiryPeriod
+            'returnUrl' => str_replace('{orderNumber}', $order->order_number, $this->returnUrl),
+            'expiryPeriod' => $this->expiryPeriod,
+            'signature' => $signature
         ];
 
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post($this->baseUrl . '/inquiry', $params);
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->post($this->baseUrl . '/inquiry', $params);
 
-            Log::info('Duitku Create Transaction Response', [
-                'status' => $response->status(),
-                'body' => $response->json()
-            ]);
+            $responseBody = $response->json();
 
-            if ($response->successful()) {
-                $result = $response->json();
+            if ($response->successful() && isset($responseBody['paymentUrl'])) {
                 return [
                     'success' => true,
-                    'data' => $result
+                    'data' => $responseBody
                 ];
             }
 
-            $errorResponse = $response->json();
-
-            // Log full error for production debugging
-            Log::error('Duitku Production Error Response:', [
-                'body' => $response->body(),
-                'status' => $response->status()
-            ]);
+            Log::error('Duitku Inquiry Failed', ['response' => $responseBody]);
 
             return [
                 'success' => false,
-                'message' => $errorResponse['statusMessage'] ?? ($errorResponse['Message'] ?? 'Failed to create transaction'),
-                'error' => $errorResponse
+                'message' => $responseBody['statusMessage'] ?? ($responseBody['Message'] ?? 'Merchant is not active / Channel not available'),
+                'error' => $responseBody
             ];
         } catch (\Exception $e) {
-            Log::error('Duitku Create Transaction Error: ' . $e->getMessage());
+            Log::error('Duitku Exception: ' . $e->getMessage());
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Connection error: ' . $e->getMessage()
             ];
         }
     }
 
-    /**
-     * Verify callback signature
-     */
     public function verifyCallback($merchantCode, $amount, $merchantOrderId, $signature)
     {
-        $calculatedSignature = md5($merchantCode . $amount . $merchantOrderId . $this->apiKey);
+        $calculatedSignature = md5($this->merchantCode . (int) $amount . $merchantOrderId . $this->apiKey);
         return $signature === $calculatedSignature;
     }
 
     /**
-     * Check transaction status
+     * Check transaction status with Duitku
      */
     public function checkTransactionStatus($merchantOrderId)
     {

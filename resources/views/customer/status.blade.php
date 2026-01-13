@@ -81,11 +81,12 @@
         <template x-if="paymentStatus === 'UNPAID'">
             <div class="space-y-3">
                 <p class="text-xs text-gray-400">Silakan lakukan pembayaran secara online atau di kasir.</p>
-                
+
                 <!-- Action: Duitku Online Payment -->
                 <button @click="payWithDuitku()" :disabled="isPaying"
                     class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
-                    <span x-show="isPaying" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                    <span x-show="isPaying"
+                        class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
                     <span x-text="isPaying ? 'Menghubungkan...' : '💳 Bayar Sekarang (Online)'"></span>
                 </button>
 
@@ -94,25 +95,23 @@
                     class="w-full bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl shadow-sm transition hover:bg-gray-100">
                     💵 Bayar Tunai di Kasir
                 </button>
-                
+
                 <!-- Simulation Button for Dev -->
-                <button @click="simulatePay()" 
-                    class="w-full text-xs text-gray-400 hover:text-gray-600 transition">
+                <button @click="simulatePay()" class="w-full text-xs text-gray-400 hover:text-gray-600 transition">
                     (Simulasi Bayar QRIS)
                 </button>
             </div>
         </template>
 
         <!-- Cashier Instruction Modal -->
-        <div x-show="showCashierInstruction"
-            class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" style="display: none;">
+        <div x-show="showCashierInstruction" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6"
+            style="display: none;">
             <div class="bg-white rounded-2xl p-6 max-w-sm text-center shadow-2xl"
                 @click.outside="showCashierInstruction = false">
                 <div class="text-4xl mb-4">🏪</div>
                 <h3 class="font-bold text-lg mb-2">Bayar di Kasir</h3>
                 <p class="text-gray-600 text-sm mb-6">Silakan menuju meja kasir dan sebutkan Nomor Order Anda:</p>
-                <div
-                    class="bg-gray-100 p-4 rounded-xl font-mono text-2xl font-bold text-blue-600 mb-6 tracking-wider">
+                <div class="bg-gray-100 p-4 rounded-xl font-mono text-2xl font-bold text-blue-600 mb-6 tracking-wider">
                     <span x-text="orderNumber.split('-').pop()"></span>
                 </div>
                 <button @click="showCashierInstruction = false"
@@ -179,26 +178,8 @@
                 },
 
                 async payWithDuitku() {
-                    this.isPaying = true;
-                    try {
-                        let res = await fetch(`${this.apiBase}/payment/duitku/create`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                            body: JSON.stringify({ order_id: this.orderId })
-                        });
-
-                        let result = await res.json();
-
-                        if (res.ok && result.data.payment_url) {
-                            window.location.href = result.data.payment_url;
-                        } else {
-                            alert('Gagal membuat pembayaran: ' + (result.message || 'Unknown error'));
-                        }
-                    } catch (e) {
-                        alert('Error system: ' + e.message);
-                    } finally {
-                        this.isPaying = false;
-                    }
+                    const paymentUrl = window.location.pathname + '/payment';
+                    window.location.href = paymentUrl;
                 },
 
                 async simulatePay() {

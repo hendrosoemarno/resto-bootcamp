@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\CustomerWebController;
 // Customer Pages (QR Scan)
 Route::get('/order/{restaurantId}', [CustomerWebController::class, 'index'])->name('customer.menu');
 Route::get('/order/status/{orderNumber}', [CustomerWebController::class, 'status'])->name('customer.status');
+Route::get('/order/status/{orderNumber}/payment', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'selectPayment'])->name('payment.select');
 
 // Kitchen Pages (Staff)
 Route::get('/kitchen/login', [\App\Http\Controllers\Web\KitchenWebController::class, 'login'])->name('kitchen.login');
