@@ -57,6 +57,7 @@ class PaymentController extends Controller
             'order_id' => 'required|exists:orders,id',
             'amount' => 'required|numeric',
             'received_amount' => 'required|numeric|min:' . $request->amount,
+            'payment_method' => 'nullable|string'
         ]);
 
         $order = Order::findOrFail($request->order_id);
@@ -67,18 +68,20 @@ class PaymentController extends Controller
         }
 
         $change = $request->received_amount - $request->amount;
+        $method = $request->input('payment_method', 'CASH');
 
         // Process
         $this->orderService->markAsPaid($order, [
             'amount' => $request->amount,
-            'method' => 'CASH',
+            'method' => $method,
             'external_id' => null,
             'payment_details' => json_encode([
                 'cash_received' => (float) $request->received_amount,
                 'change' => (float) $change,
+                'note' => $method !== 'CASH' ? 'Manual Confirmation' : null
             ])
         ], $request->user()->id);
 
-        return response()->json(['message' => 'Cash payment confirmed']);
+        return response()->json(['message' => 'Payment confirmed successfully (' . $method . ')']);
     }
 }

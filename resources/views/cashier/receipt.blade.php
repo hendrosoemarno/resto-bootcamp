@@ -158,6 +158,13 @@
         </div>
 
         @if($order->payment)
+            <div class="total-row" style="font-size: 10px; font-weight: normal; margin-top: 2px;">
+                <span>Metode</span>
+                <span>{{ str_replace('DUITKU-', '', $order->payment->method) }}</span>
+            </div>
+        @endif
+
+        @if($order->payment)
             @php
                 $details = $order->payment->payment_details;
                 if (is_string($details)) {

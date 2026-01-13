@@ -83,9 +83,9 @@
                                             class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition">
                                             Tunai 💵
                                         </button>
-                                        <button @click="syncDuitku(order.order_number)"
+                                        <button @click="initOnlinePayment(order)"
                                             class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1">
-                                            🔄 Online
+                                            💳 Online
                                         </button>
                                     </div>
                                 </td>
@@ -229,6 +229,86 @@
         </div>
     </div>
 
+    <!-- Online Payment Modal -->
+    <div x-show="showOnlineModal" x-cloak
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+        style="display: none;">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
+            @click.outside="showOnlineModal = false">
+            <div class="bg-blue-600 p-6 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-xl">Bayar Online</h3>
+                    <p class="text-blue-100 text-xs mt-1" x-text="'Order #' + selectedOrder?.order_number"></p>
+                </div>
+                <button @click="showOnlineModal = false"
+                    class="bg-white/20 hover:bg-white/30 rounded-full p-2 transition">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- Total Display -->
+                <div class="bg-gray-100 rounded-2xl p-4 flex justify-between items-center mb-6">
+                    <span class="text-sm text-gray-500 font-medium">Total Tagihan</span>
+                    <span class="text-xl font-black text-gray-800"
+                        x-text="selectedOrder ? formatRupiah(selectedOrder.total_amount) : ''"></span>
+                </div>
+
+                <div class="space-y-4 max-h-[400px] overflow-y-auto px-1">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Pilih Metode</h4>
+
+                    <template x-if="onlineMethods.length === 0 && !isGeneratingOnline">
+                        <div class="text-center py-8">
+                            <div class="animate-pulse flex flex-col items-center gap-2 text-gray-400">
+                                <svg class="h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <span class="text-xs">Memuat metode...</span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div class="grid grid-cols-1 gap-2">
+                        <template x-for="m in onlineMethods" :key="m.paymentMethod">
+                            <button @click="triggerOnlinePayment(m.paymentMethod)" :disabled="isGeneratingOnline"
+                                class="flex items-center gap-4 p-3 rounded-2xl border border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group text-left w-full">
+                                <div
+                                    class="w-12 h-12 bg-white rounded-xl shadow-sm p-2 flex items-center justify-center border group-hover:border-blue-200">
+                                    <img :src="m.paymentImage" class="max-w-full max-h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-bold text-gray-700 text-sm" x-text="m.paymentName"></p>
+                                    <p class="text-[10px] text-gray-400">Biaya: <span
+                                            x-text="formatRupiah(m.totalFee)"></span></p>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div class="mt-4">
+                        <button
+                            @click="if(confirm('Konfirmasi sebagai bayar online manual (sudah cek mutasi/rekening)?')) confirmPay('ONLINE_MANUAL')"
+                            class="w-full flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-gray-400 hover:bg-gray-50 transition-all text-sm font-bold">
+                            📝 Konfirmasi Manual (Transfer/Lainnya)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sync Button (Backup) -->
+                <div class="mt-6 pt-4 border-t text-center" x-show="selectedOrder">
+                    <button @click="syncDuitku(selectedOrder.order_number)"
+                        class="text-xs text-blue-600 font-bold hover:underline">
+                        🔄 Cek Status Manual (Jika sudah bayar)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function cashierApp() {
             return {
@@ -238,6 +318,9 @@
                 selectedOrder: null,
                 receivedAmount: 0,
                 isProcessing: false,
+                onlineMethods: [],
+                showOnlineModal: false,
+                isGeneratingOnline: false,
 
                 // Helper: Get API Base URL dynamically
                 get apiBase() {
@@ -301,12 +384,14 @@
                             body: JSON.stringify({
                                 order_id: this.selectedOrder.id,
                                 amount: this.selectedOrder.total_amount,
-                                received_amount: this.receivedAmount
+                                received_amount: method === 'CASH' ? this.receivedAmount : this.selectedOrder.total_amount,
+                                payment_method: method
                             })
                         });
 
                         if (res.ok) {
                             alert('Pembayaran Berhasil!');
+                            this.showOnlineModal = false;
 
                             // Buka nota di tab baru
                             const printUrl = `${this.routeBase}/cashier/order/${this.selectedOrder.id}/print`;
@@ -344,6 +429,43 @@
                         }
                     } catch (e) {
                         alert('Gagal menghubungkan ke server.');
+                    }
+                },
+
+                async initOnlinePayment(order) {
+                    this.selectedOrder = order;
+                    this.showOnlineModal = true;
+                    this.onlineMethods = [];
+                    try {
+                        let res = await fetch(`${this.apiBase}/payment/duitku/methods?amount=${order.total_amount}`);
+                        this.onlineMethods = await res.json();
+                    } catch (e) {
+                        console.error('Failed to fetch methods');
+                    }
+                },
+
+                async triggerOnlinePayment(methodCode) {
+                    this.isGeneratingOnline = true;
+                    try {
+                        let res = await fetch(`${this.apiBase}/payment/duitku/create`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                order_id: this.selectedOrder.id,
+                                payment_method: methodCode
+                            })
+                        });
+                        let result = await res.json();
+                        if (res.ok && result.data.payment_url) {
+                            window.open(result.data.payment_url, '_blank');
+                            this.showOnlineModal = false;
+                        } else {
+                            alert('Gagal: ' + (result.message || 'Error'));
+                        }
+                    } catch (e) {
+                        alert('System error');
+                    } finally {
+                        this.isGeneratingOnline = false;
                     }
                 },
 

@@ -37,6 +37,13 @@ class DuitkuController extends Controller
         return view('customer.select-payment', compact('order', 'methods'));
     }
 
+    public function getMethods(Request $request)
+    {
+        $amount = $request->input('amount', 10000);
+        $methods = $this->duitkuService->getPaymentMethods($amount);
+        return response()->json($methods);
+    }
+
     /**
      * Create payment request
      */

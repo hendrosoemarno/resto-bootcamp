@@ -31,6 +31,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/payments/callback', [PaymentController::class, 'callback']);
 
     // Duitku Payment Gateway
+    Route::get('/payment/duitku/methods', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'getMethods']);
     Route::post('/payment/duitku/create', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'createPayment']);
     Route::post('/payment/duitku/callback', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'callback']);
     Route::post('/payment/duitku/check-status', [\App\Http\Controllers\Api\Payment\DuitkuController::class, 'checkStatus']);
