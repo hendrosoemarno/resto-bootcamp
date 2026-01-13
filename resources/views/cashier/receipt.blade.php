@@ -8,13 +8,12 @@
     <style>
         body {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 32px;
-            /* Increased from 12px ~3x */
+            font-size: 11px;
             color: #000;
             margin: 0;
             padding: 10px;
-            width: 100%;
-            /* Flexible width for print */
+            width: 58mm;
+            /* Revert to standard narrow thermal printer width */
             background-color: #fff;
             line-height: 1.2;
         }
@@ -33,77 +32,74 @@
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 15px;
+            margin-bottom: 10px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 8px;
         }
 
         .restaurant-name {
             font-weight: bold;
-            font-size: 42px;
-            /* Increased from 16px */
-            margin-bottom: 5px;
+            font-size: 15px;
+            margin-bottom: 2px;
         }
 
         .info {
-            margin-bottom: 20px;
-            font-size: 28px;
-            /* Increased from 11px */
-            line-height: 1.4;
+            margin-bottom: 10px;
+            font-size: 10px;
+            /* Base size requested */
+            line-height: 1.3;
         }
 
         .table-items {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .table-items th {
             text-align: left;
-            border-bottom: 2px dashed #000;
-            padding: 10px 0;
-            font-size: 30px;
+            border-bottom: 1px dashed #000;
+            padding: 5px 0;
+            font-size: 10px;
         }
 
         .table-items td {
-            padding: 10px 0;
+            padding: 4px 0;
             vertical-align: top;
         }
 
         .total-section {
-            border-top: 2px dashed #000;
-            padding-top: 15px;
-            margin-bottom: 30px;
+            border-top: 1px dashed #000;
+            padding-top: 8px;
+            margin-bottom: 20px;
         }
 
         .total-row {
             display: flex;
             justify-content: space-between;
             font-weight: bold;
-            font-size: 38px;
-            /* Increased from 14px */
+            font-size: 13px;
         }
 
         .footer {
             text-align: center;
-            font-size: 26px;
-            /* Increased from 10px */
-            margin-top: 40px;
+            font-size: 9px;
+            margin-top: 20px;
             border-top: 1px dashed #000;
-            padding-top: 10px;
+            padding-top: 5px;
         }
 
         .no-print-btn {
             background: #2563eb;
             color: white;
             border: none;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             width: 100%;
             font-weight: bold;
-            font-size: 24px;
+            font-size: 14px;
         }
     </style>
 </head>
